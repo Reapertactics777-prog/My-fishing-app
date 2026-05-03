@@ -10,6 +10,7 @@
         .catch-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; border-left: 5px solid #1e40af; }
     </style>
     <link rel="icon" type="image/png" href="1000419720%20(1).png">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body class="p-4 max-w-md mx-auto">
 
@@ -145,6 +146,10 @@
                 }
             };
         }
-    </script>
+    <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
+  }
+</script>
 </body>
 </html>
