@@ -155,6 +155,26 @@
                 document.getElementById('maxWeight').innerText = maxW + " lbs";
             };
         }
-    </script>
+    <script>
+function saveCatch() {
+    // 1. Get the values from your input fields
+    // (Make sure your input tags have these IDs: 'fishSpecies' and 'fishWeight')
+    const species = document.getElementById('fishSpecies')?.value;
+    const weight = document.getElementById('fishWeight')?.value;
+
+    // 2. Check if the user actually typed something
+    if (!species || !weight) {
+        alert("Vul asseblief al die besonderhede in.");
+        return;
+    }
+
+    // 3. For now, we will just show a success message
+    alert("Vangs gestoor: " + species + " (" + weight + "kg)");
+
+    // 4. Clear the inputs for the next catch
+    document.getElementById('fishSpecies').value = '';
+    document.getElementById('fishWeight').value = '';
+}
+</script>
 </body>
 </html>
