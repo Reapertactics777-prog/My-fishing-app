@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline AnglerLog</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f0f4f8; }
+        .catch-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 15px; shadow: sm; }
+    </style>
+</head>
+<body class="p-4 max-w-md mx-auto">
+
+    <h1 class="text-3xl font-bold text-blue-800 mb-6 flex items-center gap-2">
+        🎣 AnglerLog
+    </h1>
+
+    <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+        <h2 class="text-xl font-semibold mb-4">Record Catch</h2>
+        <input type="text" id="species" placeholder="Fish Species" class="w-full mb-3 p-3 border rounded-lg">
+        <input type="number" id="weight" placeholder="Weight (lbs)" class="w-full mb-3 p-3 border rounded-lg">
+        <input type="text" id="location" placeholder="Location" class="w-full mb-3 p-3 border rounded-lg">
+        <input type="text" id="bait" placeholder="Bait / Muti used" class="w-full mb-3 p-3 border rounded-lg">
+        
+        <label class="block mb-2 text-sm text-gray-600">Photo</label>
+        <input type="file" id="photo" accept="image/*" class="w-full mb-4">
+        
+        <button onclick="saveCatch()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">
+            Save Offline
+        </button>
+    </div>
+
+    <div id="stats" class="grid grid-cols-2 gap-4 mb-8 text-center">
+        <div class="bg-blue-100 p-3 rounded-lg"><p class="text-xs">Catches</p><b id="totalCount">0</b></div>
+        <div class="bg-green-100 p-3 rounded-lg"><p class="text-xs">Best Weight</p><b id="maxWeight">0</b></div>
+    </div>
+
+    <h2 class="text-xl font-bold mb-4">Recent Catches</h2>
+    <div id="logList"></div>
+
+    <script>
+        let db;
+        const request = indexedDB.open("FishingLogDB", 1);
+
+        request.onupgradeneeded = e => {
+            db = e.target.result;
+            db.createObjectStore("catches", { keyPath: "id", autoIncrement: true });
+        };
+
+        request.onsuccess = e => {
+            db = e.target.result;
+            displayCatches();
+        };
+
+        function saveCatch() {
+            const species = document.getElementById('species').value;
+            const weight = parseFloat(document.getElementById('weight').value) || 0;
+            const location = document.getElementById('location').value;
+            const bait = document.getElementById('bait').value;
+            const photoFile = document.getElementById('photo').files[0];
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoData = e.target.result;
+                const entry = { species, weight, location, bait, photoData, date: new Date().toLocaleDateString() };
+                
+                const transaction = db.transaction(["catches"], "readwrite");
+                transaction.objectStore("catches").add(entry);
+                transaction.oncomplete = () => {
+                    location.reload(); // Refresh to show new catch
+                };
+            };
+
+            if (photoFile) {
+                reader.readAsDataURL(photoFile);
+            } else {
+                const entry = { species, weight, location, bait, photoData: null, date: new Date().toLocaleDateString() };
+                const transaction = db.transaction(["catches"], "readwrite");
+                transaction.objectStore("catches").add(entry);
+                transaction.oncomplete = () => location.reload();
+            }
+        }
+
+        function displayCatches() {
+            const store = db.transaction("catches").objectStore("catches");
+            const logList = document.getElementById('logList');
+            let maxW = 0;
+            let count = 0;
+
+            store.openCursor(null, 'prev').onsuccess = e => {
+                const cursor = e.target.result;
+                if (cursor) {
+                    count++;
+                    if (cursor.value.weight > maxW) maxW = cursor.value.weight;
+                    
+                    const card = document.createElement('div');
+                    card.className = "catch-card shadow-md";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <b>${cursor.value.species}</b> (${cursor.value.weight} lbs)<br>
+                                <span class="text-sm text-gray-500">${cursor.value.location}</span><br>
+                                <span class="text-xs bg-gray-200 px-2 rounded">${cursor.value.bait}</span>
+                            </div>
+                            <div class="text-xs text-gray-400">${cursor.value.date}</div>
+                        </div>
+                        ${cursor.value.photoData ? `<img src="${cursor.value.photoData}" class="mt-3 rounded-lg w-full h-48 object-cover">` : ''}
+                    `;
+                    logList.appendChild(card);
+                    cursor.continue();
+                }
+                document.getElementById('totalCount').innerText = count;
+                document.getElementById('maxWeight').innerText = maxW + " lbs";
+            };
+        }
+    </script>
+</body>
+</html>
