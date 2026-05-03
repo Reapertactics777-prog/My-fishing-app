@@ -27,7 +27,7 @@
         <input type="number" id="weight" placeholder="0.00" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" step="0.01">
         
         <label class="block text-sm font-medium text-gray-700 mb-1">Hengelplek</label>
-        <input type="text" id="location" placeholder="Naam van dam of rivier" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+        <input type="text" id="locationInput" placeholder="Naam van dam of rivier" class="w-full mb-3 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
         
         <label class="block text-sm font-medium text-gray-700 mb-1">Aas of "Muti"</label>
         <input type="text" id="bait" placeholder="Wat het gewerk?" class="w-full mb-4 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
@@ -52,32 +52,6 @@
     </div>
 
     <h2 class="text-xl font-bold mb-4 text-blue-900">Onlangse Vangste</h2>
-    <div id="logList">
-        </div>
-
-    <script>
-        let db;
-        const request = indexedDB.open("FishingLogDB", 1);
-
-        request.onupgradeneeded = e => {
-            db = e.target.result;
-            db.createObjectStore("catches", { keyPath: "id", autoIncrement: true });
-        };
-
-        request.onsuccess = e => {
-            db = e.target.result;
-            displayCatches();
-        };
-
-        function saveCatch() {
-            const species = document.getElementById('species').value;
-            const weight = parseFloat(document.getElementById('weight').value) || 0;
-            const locationName = document.getElementById('location').value;
-            const bait = document.getElementById('bait').value;
-            const photoFile = document.getElementById('photo').files
-    </div>
-
-    <h2 class="text-xl font-bold mb-4">Onlangse Vangste</h2>
     <div id="logList"></div>
 
     <script>
@@ -97,84 +71,80 @@
         function saveCatch() {
             const species = document.getElementById('species').value;
             const weight = parseFloat(document.getElementById('weight').value) || 0;
-            const location = document.getElementById('location').value;
+            const locationVal = document.getElementById('locationInput').value;
             const bait = document.getElementById('bait').value;
             const photoFile = document.getElementById('photo').files[0];
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const photoData = e.target.result;
-                const entry = { species, weight, location, bait, photoData, date: new Date().toLocaleDateString() };
+            if (!species || weight <= 0) {
+                alert("Vul asseblief die vis en gewig in.");
+                return;
+            }
+
+            const handleSave = (photoData = null) => {
+                const entry = { 
+                    species, 
+                    weight, 
+                    location: locationVal, 
+                    bait, 
+                    photoData, 
+                    date: new Date().toLocaleDateString() 
+                };
                 
                 const transaction = db.transaction(["catches"], "readwrite");
-                transaction.objectStore("catches").add(entry);
+                const store = transaction.objectStore("catches");
+                store.add(entry);
+                
                 transaction.oncomplete = () => {
-                    location.reload(); // Refresh to show new catch
+                    window.location.reload();
                 };
             };
 
             if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = (e) => handleSave(e.target.result);
                 reader.readAsDataURL(photoFile);
             } else {
-                const entry = { species, weight, location, bait, photoData: null, date: new Date().toLocaleDateString() };
-                const transaction = db.transaction(["catches"], "readwrite");
-                transaction.objectStore("catches").add(entry);
-                transaction.oncomplete = () => location.reload();
+                handleSave();
             }
         }
 
         function displayCatches() {
-            const store = db.transaction("catches").objectStore("catches");
+            const transaction = db.transaction("catches", "readonly");
+            const store = transaction.objectStore("catches");
             const logList = document.getElementById('logList');
             let maxW = 0;
             let count = 0;
+
+            logList.innerHTML = ''; // Clear list before loading
 
             store.openCursor(null, 'prev').onsuccess = e => {
                 const cursor = e.target.result;
                 if (cursor) {
                     count++;
-                    if (cursor.value.weight > maxW) maxW = cursor.value.weight;
+                    const val = cursor.value;
+                    if (val.weight > maxW) maxW = val.weight;
                     
                     const card = document.createElement('div');
                     card.className = "catch-card shadow-md";
                     card.innerHTML = `
                         <div class="flex justify-between items-start">
                             <div>
-                                <b>${cursor.value.species}</b> (${cursor.value.weight} lbs)<br>
-                                <span class="text-sm text-gray-500">${cursor.value.location}</span><br>
-                                <span class="text-xs bg-gray-200 px-2 rounded">${cursor.value.bait}</span>
+                                <b class="text-lg">${val.species}</b> <span class="text-blue-700">(${val.weight} kg)</span><br>
+                                <span class="text-sm text-gray-600">📍 ${val.location || 'Onbekend'}</span><br>
+                                <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded inline-block mt-1">🪱 ${val.bait || 'Geen aas'}</span>
                             </div>
-                            <div class="text-xs text-gray-400">${cursor.value.date}</div>
+                            <div class="text-xs text-gray-400">${val.date}</div>
                         </div>
-                        ${cursor.value.photoData ? `<img src="${cursor.value.photoData}" class="mt-3 rounded-lg w-full h-48 object-cover">` : ''}
+                        ${val.photoData ? `<img src="${val.photoData}" class="mt-3 rounded-lg w-full h-48 object-cover">` : ''}
                     `;
                     logList.appendChild(card);
                     cursor.continue();
+                } else {
+                    document.getElementById('totalCount').innerText = count;
+                    document.getElementById('maxWeight').innerText = maxW + " kg";
                 }
-                document.getElementById('totalCount').innerText = count;
-                document.getElementById('maxWeight').innerText = maxW + " lbs";
             };
         }
-    <script>
-function saveCatch() {
-    // 1. Get the values from your input fields
-    // (Make sure your input tags have these IDs: 'fishSpecies' and 'fishWeight')
-    const species = document.getElementById('fishSpecies')?.value;
-    const weight = document.getElementById('fishWeight')?.value;
-
-    // 2. Check if the user actually typed something
-    if (!species || !weight) {
-        alert("Vul asseblief al die besonderhede in.");
-        return;
-    }
-
-    // 3. For now, we will just show a success message
-    alert("Vangs gestoor: " + species + " (" + weight + "kg)");
-
-    // 4. Clear the inputs for the next catch
-    document.getElementById('fishSpecies').value = '';
-    document.getElementById('fishWeight').value = '';
-}
-</script>
+    </script>
 </body>
 </html>
