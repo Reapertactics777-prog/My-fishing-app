@@ -1,0 +1,17 @@
+{
+  "name": "Jy't ŉ Byt!!!!!",
+  "short_name": "FishingApp",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f0f4f8",
+  "theme_color": "#1e40af",
+  "description": "Log jou vangste vinnig en maklik.",
+  "icons": [
+    {
+      "src": "1000419720%20(1).png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
